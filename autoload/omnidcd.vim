@@ -229,7 +229,6 @@ function! s:add_path_from_dub() abort
   endif
 
   let l:echo_path = 'Added Paths:{'
-'
   let l:cmd = g:omnidcd_client_cmd
   for i in keys(s:dub_include_paths)
     let l:echo_path = l:echo_path . '[' . i . ']'
