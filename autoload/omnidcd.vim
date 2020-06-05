@@ -199,7 +199,7 @@ function! s:dcd_complete(findstart, base) abort
       endif
     endwhile
 
-    return []
+    return [a:base]
   endif
 endfunction
 
