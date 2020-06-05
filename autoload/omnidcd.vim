@@ -10,9 +10,6 @@ endif
 if !exists('g:omnidcd_dub_cmd')
   let g:omnidcd_dub_cmd = 'dub'
 endif
-if !exists('g:omnidcd_use_prepared_server')
-  let g:omnidcd_use_prepared_server = 0
-endif
 
 function! s:default_add_complete_item_func(identifier, kind, definition, symbol, documentation) abort
   let l:words = {
@@ -28,10 +25,6 @@ if !exists('g:OmniDCDAddCompleteItemFunc')
 endif
 
 let s:server_is_started = v:false
-if exists('s:server_job')
-  call job_stop(s:server_job)
-  unlet s:server_job
-endif
 
 let s:string_for_stdin = ''
 let s:bytepos = 0
@@ -41,14 +34,6 @@ let s:client_is_timeout = v:false
 
 let s:dub_include_paths = {}
 let s:include_paths = {}
-
-function! s:dcd_server_status_handle(ch, msg) abort
-  if match(a:msg, 'Server is not running') > -1
-    let s:server_query = 0
-  else
-    let s:server_query = 1
-  end
-endfunction
 
 function! s:dcd_server_handle(ch, msg) abort
   if !s:server_is_started && match(a:msg, 'Startup completed') > -1
@@ -81,54 +66,28 @@ function! s:dub_include_paths_handle(ch, msg) abort
   endif
 endfunction
 
-function! s:dcd_server_status() abort
-  if g:omnidcd_use_prepared_server
-    echom 'omnidcd#server_status(): Query Status ...'
-    let s:server_query = 0
-    let l:job = job_start(g:omnidcd_client_cmd . ' -q', {'out_cb': function('s:dcd_server_status_handle')})
-    while job_status(l:job) ==# 'run'
-      sleep 1m
-    endwhile
-    return s:server_query
-  else
-    if exists('s:server_job')
-      return job_status(s:server_job) ==# 'run'
-    else
-      return 0
-    endif
-  endif
-endfunction
-
 function! s:dcd_start_server() abort
-  if g:omnidcd_use_prepared_server && !s:dcd_server_status()
-    echoe 'omnidcd#startServer() Error: prepared DCD server is not running'
+  let l:opt = {'callback': function('s:dcd_server_handle')}
+  let l:cmd = g:omnidcd_server_cmd
+  for i in g:omnidcd_include_paths
+    let l:cmd = l:cmd . ' -I' . i
+  endfor
+  let s:server_is_started = v:false
+  let l:job = job_start(l:cmd, l:opt)
+
+  if job_status(l:job) ==# 'fail'
+    echoe 'omnidcd#startServer() Error: ' . l:cmd . 'could not run'
+    return v:false
   endif
 
-  if !exists('s:server_job')
-    let l:opt = {'callback': function('s:dcd_server_handle')}
-    let l:cmd = g:omnidcd_server_cmd
-    for i in g:omnidcd_include_paths
-      let l:cmd = l:cmd . ' -I' . i
-    endfor
-    let s:server_is_started = v:false
-    let s:server_job = job_start(l:cmd, l:opt)
-  endif
-
-  while !s:server_is_started
-    if job_status(s:server_job) ==# 'run'
-      sleep 1m
-    else
-      unlet s:server_job
-      return -1
+  while job_status(l:job) ==# 'run'
+    if s:server_is_started
+      break
     endif
+    sleep 1m
   endwhile
 
-  if job_status(s:server_job) ==# 'dead'
-    unlet s:server_job
-    return -2
-  endif
-
-  return 1
+  return v:true
 endfunction
 
 function! s:dcd_complete(findstart, base) abort
@@ -148,20 +107,9 @@ function! s:dcd_complete(findstart, base) abort
       let s:bytepos = 0
     endif
 
-    if g:omnidcd_use_prepared_server && !s:dcd_server_status()
-      echoe 'omnidcd#complete() Error: prepared DCD Server is not running'
-      return -2
-    endif
-
-    echom 'omnidcd#complete: Starting dcd-server ...'
-    let l:status = s:dcd_start_server()
-    if l:status == 1
+    if s:dcd_start_server()
       return l:start
-    elseif l:status == -1
-      echoe 'omnidcd#complete() Error: dcd-server could not run'
-      return -2
-    elseif l:status == -2
-      echoe 'omnidcd#complete() Error: dcd-server is stopped'
+    else
       return -2
     endif
   else
@@ -204,8 +152,7 @@ function! s:dcd_complete(findstart, base) abort
 endfunction
 
 function! s:add_path_from_dub() abort
-  if !s:dcd_server_status()
-    echoe 'omnidcd#addPathFromDUBInCurrentDirectory() Error: DCD Server is not running'
+  if !s:dcd_start_server()
     return
   endif
 
