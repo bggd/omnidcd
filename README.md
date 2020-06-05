@@ -27,3 +27,9 @@ g:omnidcd_include_paths = ['/D/dmd2/src/druntime/import', '/D/dmd2/src/phobos']
 
 autocmd FileType d setlocal omnifunc=omnidcd#complete
 ```
+### Similar
+
+- vim-dutyl https://github.com/idanarye/vim-dutyl
+- ncm2-d https://github.com/ncm2/ncm2-d
+- deoplete-d https://github.com/landaire/deoplete-d
+- ycmd-dcd https://github.com/BitR/ycmd-dcd
