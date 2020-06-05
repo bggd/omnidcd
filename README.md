@@ -26,6 +26,8 @@ g:omnidcd_client_cmd = '/Users/foo/AppData/Local/dub/packages/dcd-0.12.0/dcd/bin
 g:omnidcd_include_paths = ['/D/dmd2/src/druntime/import', '/D/dmd2/src/phobos']
 
 autocmd FileType d setlocal omnifunc=omnidcd#complete
+
+command! OmniDCD call omnidcd#startServer() | call omnidcd#addPathFromDUBInCurrentDirectory()
 ```
 ### Similar
 
