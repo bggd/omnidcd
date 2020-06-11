@@ -210,6 +210,10 @@ function! s:dcd_tagfunc(pattern, flags, info) abort
     return v:null
   endif
 
+  if !s:dcd_start_server()
+    return
+  endif
+
   let l:bytepos = line2byte(line('.')) - 1 + col('.') - 1
   if l:bytepos < 0
     let l:bytepos = 0
