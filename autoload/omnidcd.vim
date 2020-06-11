@@ -33,7 +33,6 @@ let s:client_is_handling_identifiers = v:false
 let s:client_is_timeout = v:false
 
 let s:dub_include_paths = {}
-let s:include_paths = {}
 
 function! s:dcd_server_handle(ch, msg) abort
   if !s:server_is_started && match(a:msg, 'Startup completed') > -1
@@ -151,6 +150,25 @@ function! s:dcd_complete(findstart, base) abort
   endif
 endfunction
 
+function! s:dcd_add_path(paths) abort
+  if !s:dcd_start_server()
+    return
+  endif
+
+  let l:cmd = g:omnidcd_client_cmd
+
+  for i in paths
+    if isdirectory(i)
+      let l:cmd = l:cmd . ' -I' . i
+    endif
+  endfor
+
+  let l:job = job_start(l:cmd)
+  while job_status(l:job) ==# 'run'
+    sleep 1m
+  endwhile
+endfunction
+
 function! s:add_path_from_dub() abort
   if !s:dcd_start_server()
     return
@@ -169,25 +187,7 @@ function! s:add_path_from_dub() abort
     return
   endif
 
-  let l:n = len(s:include_paths)
-  call extend(s:include_paths, s:dub_include_paths)
-  if l:n == len(s:include_paths)
-    return
-  endif
-
-  let l:echo_path = 'Added Paths:{'
-  let l:cmd = g:omnidcd_client_cmd
-  for i in keys(s:dub_include_paths)
-    let l:echo_path = l:echo_path . '[' . i . ']'
-    let l:cmd = l:cmd . ' -I' . i
-  endfor
-
-  echom l:echo_path . '}'
-
-  let l:job = job_start(l:cmd)
-  while job_status(l:job) ==# 'run'
-    sleep 1m
-  endwhile
+  call s:dcd_add_path(s:dub_include_paths)
 endfunction
 
 function! omnidcd#startServer() abort
@@ -196,6 +196,10 @@ endfunction
 
 function! omnidcd#complete(findstart, base) abort
   return s:dcd_complete(a:findstart, a:base)
+endfunction
+
+function! omnidcd#addPath(paths)
+  call s:dcd_add_path(a:paths)
 endfunction
 
 function! omnidcd#addPathFromDUBInCurrentDirectory() abort
