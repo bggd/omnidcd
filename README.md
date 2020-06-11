@@ -9,8 +9,9 @@
 ### Functions
 
 ```vim
-:call omnidcd#startServer()
-:call omnidcd#addPathFromDUBInCurrentDirectory()
+omnidcd#startServer()
+omnidcd#addPath()
+omnidcd#addPathFromDUBInCurrentDirectory()
 ```
 
 ### EXAMPLE
@@ -20,14 +21,14 @@ omnidcd with Vim8 on Windows 10.
 example vimrc:
 
 ```vim
-g:omnidcd_server_cmd = '/Users/foo/AppData/Local/dub/packages/dcd-0.12.0/dcd/bin/dcd-server.exe'
-g:omnidcd_client_cmd = '/Users/foo/AppData/Local/dub/packages/dcd-0.12.0/dcd/bin/dcd-client.exe'
+let g:omnidcd_server_cmd = '/Users/foo/AppData/Local/dub/packages/dcd-0.12.0/dcd/bin/dcd-server.exe'
+let g:omnidcd_client_cmd = '/Users/foo/AppData/Local/dub/packages/dcd-0.12.0/dcd/bin/dcd-client.exe'
 
-g:omnidcd_include_paths = ['/D/dmd2/src/druntime/import', '/D/dmd2/src/phobos']
+let s:include_paths = ['/D/dmd2/src/druntime/import', '/D/dmd2/src/phobos']
 
 autocmd FileType d setlocal omnifunc=omnidcd#complete
 
-command! OmniDCD call omnidcd#startServer() | call omnidcd#addPathFromDUBInCurrentDirectory()
+command! OmniDCD call omnidcd#startServer() | call omnidcd#addPath(s:include_paths) | call omnidcd#addPathFromDUBInCurrentDirectory()
 ```
 ### Similar
 
