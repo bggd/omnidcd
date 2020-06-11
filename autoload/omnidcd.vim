@@ -272,7 +272,7 @@ function! omnidcd#complete(findstart, base) abort
   return s:dcd_complete(a:findstart, a:base)
 endfunction
 
-function! omnidcd#addPath(paths)
+function! omnidcd#addPath(paths) abort
   call s:dcd_add_path(a:paths)
 endfunction
 
