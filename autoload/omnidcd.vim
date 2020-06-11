@@ -31,6 +31,10 @@ let s:client_is_timeout = v:false
 
 let s:dub_include_paths = {}
 
+let s:declarations = []
+
+let s:local_use_bytepos = ''
+
 function! s:dcd_server_handle(ch, msg) abort
   if !s:server_is_started && match(a:msg, 'Startup completed') > -1
     let s:server_is_started = v:true
@@ -59,6 +63,23 @@ endfunction
 function! s:dub_include_paths_handle(ch, msg) abort
   if isdirectory(a:msg)
     let s:dub_include_paths[a:msg] = 1
+  endif
+endfunction
+
+function! s:dcd_symbol_location_handle(ch, msg) abort
+  let l:ary = split(a:msg, '\t')
+  if filereadable(get(l:ary, 0, ''))
+    call add(s:declarations, l:ary)
+  endif
+endfunction
+
+function! s:dcd_local_use_handle(ch, msg) abort
+  if a:msg ==# '00000'
+    return
+  endif
+  let l:ary = split(a:msg, '\t')
+  if len(l:ary) > 1
+    let s:local_use_bytepos = l:ary[1]
   endif
 endfunction
 
@@ -184,6 +205,65 @@ function! s:add_path_from_dub() abort
   call s:dcd_add_path(keys(s:dub_include_paths))
 endfunction
 
+function! s:dcd_tagfunc(pattern, flags, info) abort
+  if a:flags !=# 'c'
+    return v:null
+  endif
+
+  let l:bytepos = line2byte(line('.')) - 1 + col('.') - 1
+  if l:bytepos < 0
+    let l:bytepos = 0
+  endif
+
+  let s:declarations = []
+  let l:opt = {
+        \ 'in_io': 'buffer',
+        \ 'in_name': bufname(),
+        \ 'out_cb': function('s:dcd_symbol_location_handle')
+        \ }
+  let l:cmd = g:omnidcd_client_cmd . ' --symbolLocation -c' . (l:bytepos + 1)
+  let l:job = job_start(l:cmd, l:opt)
+  while job_status(l:job) ==# 'run'
+    sleep 1m
+  endwhile
+
+  let l:result = []
+  for l:symloc in s:declarations
+    call add(l:result, {
+          \ 'name': a:pattern,
+          \ 'filename': l:symloc[0],
+          \ 'cmd': 'go ' . (l:symloc[1] + 1)
+          \ })
+  endfor
+
+  if empty(l:result)
+    let s:local_use_bytepos = ''
+
+    let l:opt = {
+          \ 'in_io': 'buffer',
+          \ 'in_name': bufname(),
+          \ 'out_cb': function('s:dcd_local_use_handle')
+          \ }
+    let l:cmd = g:omnidcd_client_cmd . ' --localUse -c' . (l:bytepos + 1)
+    let l:job = job_start(l:cmd, l:opt)
+    while job_status(l:job) ==# 'run'
+      sleep 1m
+    endwhile
+
+    if empty(s:local_use_bytepos)
+      return v:null
+    endif
+
+    call add(l:result, {
+          \ 'name': a:pattern,
+          \ 'filename': bufname(),
+          \ 'cmd': 'go ' . (s:local_use_bytepos + 1),
+          \ })
+  endif
+
+  return l:result
+endfunction
+
 function! omnidcd#startServer() abort
   call s:dcd_start_server()
 endfunction
@@ -200,3 +280,6 @@ function! omnidcd#addPathFromDUBInCurrentDirectory() abort
   call s:add_path_from_dub()
 endfunction
 
+function! omnidcd#tagfunc(pattern, flags, info) abort
+  return s:dcd_tagfunc(a:pattern, a:flags, a:info)
+endfunction
