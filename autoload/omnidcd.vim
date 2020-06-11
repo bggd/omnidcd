@@ -4,9 +4,6 @@ end
 if !exists('g:omnidcd_client_cmd')
   let g:omnidcd_client_cmd = 'dcd-client'
 endif
-if !exists('g:omnidcd_include_paths')
-  let g:omnidcd_include_paths = []
-endif
 if !exists('g:omnidcd_dub_cmd')
   let g:omnidcd_dub_cmd = 'dub'
 endif
@@ -68,9 +65,6 @@ endfunction
 function! s:dcd_start_server() abort
   let l:opt = {'callback': function('s:dcd_server_handle')}
   let l:cmd = g:omnidcd_server_cmd
-  for i in g:omnidcd_include_paths
-    let l:cmd = l:cmd . ' -I' . i
-  endfor
   let s:server_is_started = v:false
   let l:job = job_start(l:cmd, l:opt)
 
@@ -157,7 +151,7 @@ function! s:dcd_add_path(paths) abort
 
   let l:cmd = g:omnidcd_client_cmd
 
-  for i in paths
+  for i in a:paths
     if isdirectory(i)
       let l:cmd = l:cmd . ' -I' . i
     endif
@@ -187,7 +181,7 @@ function! s:add_path_from_dub() abort
     return
   endif
 
-  call s:dcd_add_path(s:dub_include_paths)
+  call s:dcd_add_path(keys(s:dub_include_paths))
 endfunction
 
 function! omnidcd#startServer() abort
