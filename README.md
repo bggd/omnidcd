@@ -12,6 +12,10 @@
 omnidcd#startServer()
 omnidcd#addPath(paths)
 omnidcd#addPathFromDUBInCurrentDirectory()
+
+" for completefunc or omnifunc
+omnidcd#complete(findstart, base)
+" for tagfunc
 omnidcd#tagfunc(pattern, flags, info)
 ```
 
