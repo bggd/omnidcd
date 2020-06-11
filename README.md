@@ -10,7 +10,7 @@
 
 ```vim
 omnidcd#startServer()
-omnidcd#addPath()
+omnidcd#addPath(paths)
 omnidcd#addPathFromDUBInCurrentDirectory()
 ```
 
