@@ -12,6 +12,7 @@
 omnidcd#startServer()
 omnidcd#addPath(paths)
 omnidcd#addPathFromDUBInCurrentDirectory()
+omnidcd#tagfunc(pattern, flags, info)
 ```
 
 ### EXAMPLE
@@ -27,7 +28,7 @@ let g:omnidcd_client_cmd = '/Users/foo/AppData/Local/dub/packages/dcd-0.12.0/dcd
 let s:include_paths = ['/D/dmd2/src/druntime/import', '/D/dmd2/src/phobos']
 
 autocmd FileType d setlocal omnifunc=omnidcd#complete
-
+autocmd FileType d setlocal tagfunc=omnidcd#tagfunc
 command! OmniDCD call omnidcd#startServer() | call omnidcd#addPath(s:include_paths) | call omnidcd#addPathFromDUBInCurrentDirectory()
 ```
 ### Similar
