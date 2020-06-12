@@ -219,17 +219,41 @@ function! s:dcd_tagfunc(pattern, flags, info) abort
     let l:bytepos = 0
   endif
 
+  let l:jobs = []
+
+  let s:client_is_timeout = v:false
+
   let s:declarations = []
   let l:opt = {
         \ 'in_io': 'buffer',
         \ 'in_name': bufname(),
-        \ 'out_cb': function('s:dcd_symbol_location_handle')
+        \ 'out_cb': function('s:dcd_symbol_location_handle'),
+        \ 'err_cb': function('s:dcd_client_stderr')
         \ }
   let l:cmd = g:omnidcd_client_cmd . ' --symbolLocation -c' . (l:bytepos + 1)
+  call add(l:jobs, job_start(l:cmd, l:opt))
+
+  let s:local_use_bytepos = ''
+
+  let l:opt = {
+        \ 'in_io': 'buffer',
+        \ 'in_name': bufname(),
+        \ 'out_cb': function('s:dcd_local_use_handle'),
+        \ 'err_cb': function('s:dcd_client_stderr')
+        \ }
+  let l:cmd = g:omnidcd_client_cmd . ' --localUse -c' . (l:bytepos + 1)
   let l:job = job_start(l:cmd, l:opt)
-  while job_status(l:job) ==# 'run'
+  call add(l:jobs, job_start(l:cmd, l:opt))
+
+  while job_status(l:jobs[0]) ==# 'run' || job_status(l:jobs[1]) ==# 'run'
     sleep 1m
   endwhile
+
+  if s:client_is_timeout
+    let s:client_is_timeout = v:false
+    echom 'omnidcd#tagfunc: DCD Client is timeoutted! Retry a few seconds later'
+    return []
+  endif
 
   let l:result = []
   for l:symloc in s:declarations
@@ -240,29 +264,16 @@ function! s:dcd_tagfunc(pattern, flags, info) abort
           \ })
   endfor
 
-  if empty(l:result)
-    let s:local_use_bytepos = ''
-
-    let l:opt = {
-          \ 'in_io': 'buffer',
-          \ 'in_name': bufname(),
-          \ 'out_cb': function('s:dcd_local_use_handle')
-          \ }
-    let l:cmd = g:omnidcd_client_cmd . ' --localUse -c' . (l:bytepos + 1)
-    let l:job = job_start(l:cmd, l:opt)
-    while job_status(l:job) ==# 'run'
-      sleep 1m
-    endwhile
-
-    if empty(s:local_use_bytepos)
-      return v:null
-    endif
-
+  if empty(l:result) && !empty(s:local_use_bytepos)
     call add(l:result, {
           \ 'name': a:pattern,
           \ 'filename': bufname(),
           \ 'cmd': 'go ' . (s:local_use_bytepos + 1),
           \ })
+  endif
+
+  if empty(l:result)
+    return v:null
   endif
 
   return l:result
